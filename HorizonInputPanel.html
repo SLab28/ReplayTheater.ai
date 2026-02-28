@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HorizonInputPanel – Component Demo</title>
+</head>
+<body style="margin:0;background:#0d0f12;min-height:100vh;display:flex;align-items:center;justify-content:center;background-image:radial-gradient(ellipse 80% 60% at 50% 50%,#151b25 0%,transparent 70%),repeating-linear-gradient(0deg,transparent,transparent 39px,#ffffff05 39px,#ffffff05 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,#ffffff03 39px,#ffffff03 40px)">
+
+  <!-- Demo feedback strip (not part of the component) -->
+  <div id="__demo_out" style="
+    position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+    max-width:480px;width:90%;background:#0d0f12cc;border:1px solid #ffffff10;
+    border-radius:8px;padding:10px 16px;font:300 11.5px/1.5 'DM Mono',monospace;
+    color:#5a9fd4;opacity:0;transition:opacity 0.4s;text-align:center;pointer-events:none;
+  "></div>
+
+  <!-- ╔══════════════════════════════════════════════════════════╗
+       ║            HorizonInputPanel  —  WebXR Component        ║
+       ║  Copy everything from here to END COMPONENT into your   ║
+       ║  WebXR HTML file. That's it.                            ║
+       ╠══════════════════════════════════════════════════════════╣
+       ║  QUICK START                                             ║
+       ║    const panel = new HorizonInputPanel()                ║
+       ║    panel.on('submit', ({ text }) => { ... })            ║
+       ║                                                          ║
+       ║  OPTIONS (all optional)                                  ║
+       ║    maxLength   {number}  500      char cap               ║
+       ║    placeholder {string}  default  textarea hint text     ║
+       ║    position    {string}  'center' | 'bottom' | 'top'    ║
+       ║    zIndex      {number}  9999                            ║
+       ║    fonts       {boolean} true     inject Google Fonts    ║
+       ║                                                          ║
+       ║  EVENTS  (panel.on(event, fn))                           ║
+       ║    'submit'      → { text }   user submitted text        ║
+       ║    'speak:start' → { text }   TTS playback began         ║
+       ║    'speak:end'   → {}         TTS playback ended         ║
+       ║                                                          ║
+       ║  METHODS                                                 ║
+       ║    panel.show() / hide() / toggle()                     ║
+       ║    panel.clear()                                         ║
+       ║    panel.getValue() → string                             ║
+       ║    panel.setValue(str)                                   ║
+       ║    panel.destroy()                                       ║
+       ╚══════════════════════════════════════════════════════════╝ -->
+  <script>
+  class HorizonInputPanel {
+
+    constructor(opts = {}) {
+      this._o = Object.assign({
+        maxLength:   500,
+        placeholder: 'Say something\u2026',
+        position:    'center',
+        zIndex:      9999,
+        fonts:       true,
+      }, opts);
+      this._listeners = {};
+      this._speaking  = false;
+      this._synth     = window.speechSynthesis || null;
+      if (this._o.fonts) this._injectFonts();
+      this._injectStyles();
+      this._buildDOM();
+      this._bindEvents();
+    }
+
+    /* ── Public API ──────────────────────────────────────────── */
+    on(e, fn)    { (this._listeners[e] = this._listeners[e] || []).push(fn); return this; }
+    show()       { this._root.style.display = '';     return this; }
+    hide()       { this._root.style.display = 'none'; return this; }
+    toggle()     { this._root.style.display = this._root.style.display === 'none' ? '' : 'none'; return this; }
+    destroy()    { this._root.remove(); document.getElementById('__hip_styles')?.remove(); }
+    getValue()   { return this._ta.value; }
+    setValue(v)  { this._ta.value = v; this._ta.dispatchEvent(new Event('input')); return this; }
+    clear()      { return this.setValue(''); }
+
+    /* ── Fonts ───────────────────────────────────────────────── */
+    _injectFonts() {
+      if (document.getElementById('__hip_fonts')) return;
+      Object.assign(document.head.appendChild(document.createElement('link')), {
+        id: '__hip_fonts', rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap',
+      });
+    }
+
+    /* ── Styles ──────────────────────────────────────────────── */
+    _posCSS() {
+      const p = this._o.position;
+      if (p === 'bottom') return 'bottom:32px;left:50%;';
+      if (p === 'top')    return 'top:32px;left:50%;';
+      return 'top:50%;left:50%;';
+    }
+    _translateBase() {
+      return (this._o.position === 'center') ? 'translate(-50%,-50%)' : 'translateX(-50%)';
+    }
+
+    _injectStyles() {
+      if (document.getElementById('__hip_styles')) return;
+      const tb = this._translateBase();
+      document.head.insertAdjacentHTML('beforeend', `<style id="__hip_styles">
+        #__hip_root{
+          --b:#1e2025;--br:#ffffff14;--brf:#ffffff28;--t:#e4e6ed;
+          --ph:#383c45;--mu:#555a66;--ac:#7eb8d4;--ag:#7eb8d422;
+          --bh:#333740;--r:16px;
+          position:fixed;${this._posCSS()}
+          width:min(520px,92vw);
+          font-family:'DM Sans','Segoe UI',system-ui,sans-serif;
+          z-index:${this._o.zIndex};
+          animation:__hipF 6s ease-in-out infinite;
+        }
+        @keyframes __hipF{
+          0%,100%{transform:${tb} translateY(0)}
+          50%    {transform:${tb} translateY(-7px)}
+        }
+        #__hip_root .b{
+          background:var(--b);border:1px solid var(--br);border-radius:var(--r);
+          box-shadow:0 12px 56px #00000099,0 2px 12px #00000077,inset 0 1px 0 #ffffff08;
+          transition:border-color .25s,box-shadow .25s;
+          padding:14px 14px 12px;display:flex;flex-direction:column;
+        }
+        #__hip_root .b:focus-within{
+          border-color:var(--brf);
+          box-shadow:0 12px 56px #00000099,0 2px 12px #00000077,0 0 0 3px var(--ag),inset 0 1px 0 #ffffff08;
+        }
+        #__hip_root .ta{
+          width:100%;min-height:72px;max-height:200px;resize:none;
+          background:transparent;border:none;outline:none;
+          color:var(--t);font-family:'DM Mono','Courier New',monospace;
+          font-size:13.5px;font-weight:300;line-height:1.7;
+          caret-color:var(--ac);padding:0 4px 10px;overflow-y:auto;
+        }
+        #__hip_root .ta::placeholder{color:var(--ph)}
+        #__hip_root .row{
+          display:flex;align-items:center;justify-content:space-between;
+          padding-top:8px;border-top:1px solid #ffffff08;
+        }
+        #__hip_root .l,#__hip_root .r{display:flex;align-items:center;gap:4px}
+        #__hip_root .r{gap:6px}
+        #__hip_root .ch{
+          font-size:10.5px;font-family:'DM Mono',monospace;color:var(--mu);
+          padding:0 4px;transition:color .2s;user-select:none;min-width:52px;text-align:right;
+        }
+        #__hip_root .ch.w{color:#c97c3a} #__hip_root .ch.d{color:#d95c6a}
+        #__hip_root .ib{
+          display:flex;align-items:center;justify-content:center;
+          width:34px;height:34px;border-radius:10px;border:none;
+          background:transparent;color:var(--mu);cursor:pointer;
+          transition:background .18s,color .18s;flex-shrink:0;
+        }
+        #__hip_root .ib svg{width:17px;height:17px}
+        #__hip_root .ib:hover{background:var(--bh);color:var(--t)}
+        #__hip_root .mic.on{color:var(--ac);background:var(--ag)}
+        #__hip_root .wv{
+          display:flex;align-items:center;gap:2px;height:16px;
+          width:0;overflow:hidden;opacity:0;transition:width .3s,opacity .3s,margin .3s;
+        }
+        #__hip_root .wv.on{width:26px;opacity:1;margin-left:2px}
+        #__hip_root .wv span{width:2.5px;border-radius:2px;background:var(--ac)}
+        #__hip_root .wv span:nth-child(1){animation:__hipW .85s ease-in-out -.4s infinite}
+        #__hip_root .wv span:nth-child(2){animation:__hipW .85s ease-in-out -.2s infinite}
+        #__hip_root .wv span:nth-child(3){animation:__hipW .85s ease-in-out  .0s infinite}
+        #__hip_root .wv span:nth-child(4){animation:__hipW .85s ease-in-out -.3s infinite}
+        @keyframes __hipW{0%,100%{height:3px}50%{height:13px}}
+        #__hip_root .sb{
+          display:flex;align-items:center;justify-content:center;
+          width:34px;height:34px;border-radius:10px;border:none;
+          background:linear-gradient(145deg,#2e4f66,#1e3548);
+          color:#a8d4ec;cursor:pointer;flex-shrink:0;
+          transition:background .18s,box-shadow .18s,transform .1s,opacity .2s;
+        }
+        #__hip_root .sb svg{width:16px;height:16px}
+        #__hip_root .sb:hover:not(:disabled){background:linear-gradient(145deg,#3a6180,#274560);box-shadow:0 0 16px #7eb8d430}
+        #__hip_root .sb:active:not(:disabled){transform:scale(.93)}
+        #__hip_root .sb:disabled{opacity:.28;cursor:not-allowed}
+      </style>`);
+    }
+
+    /* ── DOM ─────────────────────────────────────────────────── */
+    _svg(d, sw = '1.6', extra = '') {
+      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" ${extra}>${d}</svg>`;
+    }
+    _micPath()  { return '<rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3M8 22h8"/>'; }
+    _stopPath() { return '<rect x="6" y="6" width="12" height="12" rx="2"/>'; }
+
+    _buildDOM() {
+      this._root = Object.assign(document.createElement('div'), { id: '__hip_root' });
+      this._root.innerHTML = `
+        <div class="b">
+          <textarea class="ta" placeholder="${this._o.placeholder}"
+            maxlength="${this._o.maxLength}" rows="3"
+            spellcheck="false" autocomplete="off"></textarea>
+          <div class="row">
+            <div class="l">
+              <button class="ib mic" aria-label="Speak">
+                <svg id="__hip_mico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  ${this._micPath()}
+                </svg>
+              </button>
+              <div class="wv"><span></span><span></span><span></span><span></span></div>
+            </div>
+            <div class="r">
+              <span class="ch"></span>
+              <button class="ib clr" aria-label="Clear" style="display:none">
+                ${this._svg('<path d="M18 6 6 18M6 6l12 12"/>')}
+              </button>
+              <button class="sb" aria-label="Submit" disabled>
+                ${this._svg('<path d="M5 12h14M13 6l6 6-6 6"/>','2')}
+              </button>
+            </div>
+          </div>
+        </div>`;
+      document.body.appendChild(this._root);
+      this._ta  = this._root.querySelector('.ta');
+      this._ch  = this._root.querySelector('.ch');
+      this._clr = this._root.querySelector('.clr');
+      this._sub = this._root.querySelector('.sb');
+      this._mic = this._root.querySelector('.mic');
+      this._ico = this._root.querySelector('#__hip_mico');
+      this._wv  = this._root.querySelector('.wv');
+    }
+
+    /* ── Events ──────────────────────────────────────────────── */
+    _bindEvents() {
+      const MAX = this._o.maxLength;
+
+      this._ta.addEventListener('input', () => {
+        const n = this._ta.value.length, has = n > 0;
+        this._ch.textContent = has ? `${n} / ${MAX}` : '';
+        this._ch.className = 'ch' + (n > MAX * .9 ? ' d' : n > MAX * .7 ? ' w' : '');
+        this._sub.disabled = !has;
+        this._clr.style.display = has ? '' : 'none';
+        this._ta.style.height = 'auto';
+        this._ta.style.height = Math.min(this._ta.scrollHeight, 200) + 'px';
+      });
+
+      this._clr.addEventListener('click', () => this.clear());
+
+      this._sub.addEventListener('click', () => {
+        const text = this._ta.value.trim();
+        if (!text) return;
+        this._emit('submit', { text });
+        this._sub.style.boxShadow = '0 0 20px #7eb8d455';
+        setTimeout(() => this._sub.style.boxShadow = '', 350);
+      });
+
+      this._ta.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') this._sub.click();
+      });
+
+      this._mic.addEventListener('click', () =>
+        this._speaking ? this._stopSpeech() : this._startSpeech()
+      );
+
+      if (this._synth) this._synth.onvoiceschanged = () => {};
+    }
+
+    /* ── Speech ──────────────────────────────────────────────── */
+    _startSpeech() {
+      if (!this._synth) return;
+      const text = this._ta.value.trim() || 'Horizon OS spatial interface is ready.';
+      const utt  = new SpeechSynthesisUtterance(text);
+      utt.rate = 0.93; utt.pitch = 1; utt.volume = 1;
+      const voices = this._synth.getVoices();
+      const pick = voices.find(v => /Samantha|Karen|Moira|Kate|Ava|Allison/i.test(v.name))
+                || voices.find(v => /en/i.test(v.lang) && v.localService);
+      if (pick) utt.voice = pick;
+      utt.onstart = () => {
+        this._speaking = true;
+        this._mic.classList.add('on');
+        this._wv.classList.add('on');
+        this._ico.innerHTML = this._stopPath();
+        this._emit('speak:start', { text });
+      };
+      utt.onend = utt.onerror = () => this._stopSpeech();
+      this._synth.speak(utt);
+    }
+
+    _stopSpeech() {
+      this._synth?.cancel();
+      this._speaking = false;
+      this._mic.classList.remove('on');
+      this._wv.classList.remove('on');
+      this._ico.innerHTML = this._micPath();
+      this._emit('speak:end', {});
+    }
+
+    /* ── Emit ────────────────────────────────────────────────── */
+    _emit(e, d) { (this._listeners[e] || []).forEach(fn => fn(d)); }
+  }
+  // END COMPONENT
+
+
+  /* ── Demo wiring (not part of component) ────────────────── */
+  const panel = new HorizonInputPanel();
+  const out   = document.getElementById('__demo_out');
+
+  panel
+    .on('submit',      ({ text }) => flash(`submit → "${text}"`))
+    .on('speak:start', ({ text }) => flash(`speaking: "${text.slice(0, 40)}${text.length > 40 ? '…' : ''}"`) )
+    .on('speak:end',   ()         => setTimeout(() => out.style.opacity = '0', 1200));
+
+  function flash(msg) {
+    out.textContent = msg;
+    out.style.opacity = '1';
+    clearTimeout(out._t);
+    out._t = setTimeout(() => out.style.opacity = '0', 4000);
+  }
+  </script>
+
+</body>
+</html>
