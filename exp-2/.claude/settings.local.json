@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:runware.ai)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(npm install)",
+      "Bash(timeout 5 node server.js)",
+      "Bash(node -e \"import\\(''./server.js''\\).then\\(\\(\\) => { setTimeout\\(\\(\\) => process.exit\\(0\\), 2000\\) }\\).catch\\(e => { console.error\\(e\\); process.exit\\(1\\) }\\)\")",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)"
+    ]
+  }
+}

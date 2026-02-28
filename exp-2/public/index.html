@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReplayTheatre.ai</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Phase 0: Landing -->
+  <section id="landing" class="phase active">
+    <div class="landing-content">
+      <h1>ReplayTheatre<span class="dot">.ai</span></h1>
+      <p class="tagline">Tell your story. Watch it come alive.</p>
+      <p class="subtitle">
+        A digital playback theatre that listens to your personal story
+        and replays it as an AI-generated visual experience.
+      </p>
+      <button id="btn-enter" class="btn-primary">Enter the Theatre</button>
+      <p class="disclaimer">This is not therapy. If you're in crisis, please contact a helpline.</p>
+    </div>
+  </section>
+
+  <!-- Phase 1: Guided story input -->
+  <section id="story-input" class="phase">
+    <div class="input-content">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <p class="prompt-label" id="prompt-label">The Conductor</p>
+      <h2 class="prompt-text" id="prompt-text"></h2>
+      <div class="input-area">
+        <textarea
+          id="answer-box"
+          placeholder="Type your response here..."
+          rows="4"
+        ></textarea>
+        <div class="input-controls">
+          <button id="btn-mic" class="btn-icon" title="Speak your answer">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+          </button>
+          <button id="btn-next" class="btn-primary btn-small">Continue</button>
+        </div>
+      </div>
+      <p class="mic-status" id="mic-status"></p>
+    </div>
+  </section>
+
+  <!-- Phase 2: Hold / Waiting -->
+  <section id="hold" class="phase">
+    <div class="hold-content">
+      <div class="breathing-circle"></div>
+      <h2>Your story is being heard...</h2>
+      <p class="hold-sub">Take a breath. Your replay is being created.</p>
+    </div>
+  </section>
+
+  <!-- Phase 3: Video playback -->
+  <section id="playback" class="phase">
+    <div class="playback-content">
+      <h2>Your Replay</h2>
+      <div class="video-stage">
+        <video id="replay-video" controls autoplay></video>
+      </div>
+      <div class="reflection">
+        <p class="reflection-prompt">How did that feel?</p>
+        <div class="reflection-actions">
+          <button id="btn-replay" class="btn-secondary">Replay</button>
+          <button id="btn-restart" class="btn-secondary">Start Over</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Phase 3b: Error state -->
+  <section id="error" class="phase">
+    <div class="hold-content">
+      <h2>Something went wrong</h2>
+      <p class="hold-sub" id="error-message">We couldn't generate your replay. Please try again.</p>
+      <button id="btn-retry" class="btn-primary" style="margin-top:2rem">Try Again</button>
+    </div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

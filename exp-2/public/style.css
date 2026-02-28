@@ -1,0 +1,335 @@
+/* ── Reset & Base ── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0d0b0e;
+  --bg-warm: #141012;
+  --surface: #1c1719;
+  --text: #e8e0dc;
+  --text-muted: #9a8e88;
+  --accent: #d4a574;
+  --accent-glow: #e8c49a;
+  --accent-dim: #8b6f4e;
+  --danger: #c47070;
+  --radius: 12px;
+  --transition: 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+html, body {
+  height: 100%;
+  font-family: "Georgia", "Times New Roman", serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* ── Phases ── */
+.phase {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition);
+}
+
+.phase.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Landing ── */
+#landing {
+  background: radial-gradient(ellipse at 50% 40%, #1f1714 0%, var(--bg) 70%);
+}
+
+.landing-content {
+  text-align: center;
+  max-width: 600px;
+  padding: 2rem;
+}
+
+.landing-content h1 {
+  font-size: 3.5rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+.landing-content .dot {
+  color: var(--accent);
+}
+
+.tagline {
+  font-size: 1.3rem;
+  color: var(--accent-glow);
+  margin-bottom: 1.5rem;
+  font-style: italic;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin-bottom: 2.5rem;
+}
+
+.disclaimer {
+  margin-top: 2rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+/* ── Buttons ── */
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 0.9rem 2.5rem;
+  font-size: 1.1rem;
+  font-family: inherit;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.02em;
+}
+
+.btn-primary:hover {
+  background: var(--accent-glow);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 30px rgba(212, 165, 116, 0.25);
+}
+
+.btn-small {
+  padding: 0.6rem 1.8rem;
+  font-size: 0.95rem;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent-dim);
+  padding: 0.6rem 1.8rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+  background: rgba(212, 165, 116, 0.08);
+}
+
+.btn-icon {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--surface);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.btn-icon:hover {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+
+.btn-icon.recording {
+  color: var(--danger);
+  border-color: var(--danger);
+  animation: pulse-ring 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(196, 112, 112, 0.3); }
+  50% { box-shadow: 0 0 0 10px rgba(196, 112, 112, 0); }
+}
+
+/* ── Story Input ── */
+#story-input {
+  background: var(--bg-warm);
+}
+
+.input-content {
+  width: 100%;
+  max-width: 650px;
+  padding: 2rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 3px;
+  background: var(--surface);
+  border-radius: 2px;
+  margin-bottom: 3rem;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.5s ease;
+  width: 0%;
+}
+
+.prompt-label {
+  font-size: 0.8rem;
+  color: var(--accent-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 0.8rem;
+}
+
+.prompt-text {
+  font-size: 1.6rem;
+  font-weight: 400;
+  line-height: 1.5;
+  margin-bottom: 2rem;
+  min-height: 3.2rem;
+  color: var(--text);
+}
+
+.input-area textarea {
+  width: 100%;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid rgba(212, 165, 116, 0.1);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: none;
+  transition: border-color 0.3s ease;
+}
+
+.input-area textarea:focus {
+  outline: none;
+  border-color: var(--accent-dim);
+}
+
+.input-area textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.input-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+
+.mic-status {
+  margin-top: 0.8rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  min-height: 1.2rem;
+}
+
+/* ── Hold / Waiting ── */
+#hold {
+  background: var(--bg);
+}
+
+.hold-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.breathing-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-dim) 0%, transparent 70%);
+  margin: 0 auto 2.5rem;
+  animation: breathe 4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(0.8); opacity: 0.4; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+}
+
+.hold-content h2 {
+  font-size: 1.5rem;
+  font-weight: 400;
+  margin-bottom: 0.8rem;
+}
+
+.hold-sub {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* ── Video Playback ── */
+#playback {
+  background: var(--bg);
+}
+
+.playback-content {
+  text-align: center;
+  width: 100%;
+  max-width: 800px;
+  padding: 2rem;
+}
+
+.playback-content h2 {
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--accent-glow);
+  margin-bottom: 1.5rem;
+}
+
+.video-stage {
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 2rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.video-stage video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reflection-prompt {
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.reflection-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+/* ── Error ── */
+#error {
+  background: var(--bg);
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .landing-content h1 { font-size: 2.2rem; }
+  .tagline { font-size: 1rem; }
+  .prompt-text { font-size: 1.2rem; }
+  .playback-content { padding: 1rem; }
+}
