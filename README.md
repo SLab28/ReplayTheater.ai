@@ -1,4 +1,4 @@
-# ReplayTheather.ai
+# ReplayTheater.ai
 
 ## Problem Statement
 
