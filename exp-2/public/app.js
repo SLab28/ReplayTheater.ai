@@ -1,153 +1,140 @@
-// ── Guided prompts (conductor questions) ──
-const PROMPTS = [
-  "Take a moment to settle in. When you're ready, think of a moment from your life that stayed with you.",
-  "Tell me about that moment. What happened?",
-  "What did you feel in that moment?",
-  "If you could let go of something from that experience, what would it be?",
-];
+/* ──────────────────────────────────────
+   ReplayTheatre.ai — Front-end
+   ────────────────────────────────────── */
 
 // ── State ──
-let currentStep = 0;
-const answers = [];
+let userStory = "";
+let videoURL = "";
+let currentPhase = "landing";
 
-// ── DOM refs ──
+// ── Shorthand ──
+const $ = (id) => document.getElementById(id);
+
 const phases = {
-  landing: document.getElementById("landing"),
-  storyInput: document.getElementById("story-input"),
-  hold: document.getElementById("hold"),
-  playback: document.getElementById("playback"),
-  error: document.getElementById("error"),
+  landing: $("landing"),
+  prompt: $("prompt"),
+  acceptance: $("acceptance"),
+  playback: $("playback"),
+  reflection: $("reflection"),
+  ending: $("ending"),
+  error: $("error"),
 };
 
-const promptText = document.getElementById("prompt-text");
-const promptLabel = document.getElementById("prompt-label");
-const answerBox = document.getElementById("answer-box");
-const progressFill = document.getElementById("progress-fill");
-const micStatus = document.getElementById("mic-status");
-const replayVideo = document.getElementById("replay-video");
-const errorMessage = document.getElementById("error-message");
+// ──────────────────────────────────────
+//  Phase Transitions
+// ──────────────────────────────────────
+function showPhase(name, { zoom = false, unfold = false } = {}) {
+  const prev = phases[currentPhase];
+  const next = phases[name];
 
-// ── Phase transitions ──
-function showPhase(name) {
-  Object.values(phases).forEach((el) => el.classList.remove("active"));
-  phases[name].classList.add("active");
+  // Exit current phase
+  if (zoom) {
+    prev.classList.add("zoom-exit");
+    prev.classList.remove("active");
+    setTimeout(() => prev.classList.remove("zoom-exit"), 900);
+  } else {
+    prev.classList.remove("active");
+  }
+
+  // Enter next phase (with optional delay for zoom overlap)
+  const delay = zoom ? 500 : 120;
+  setTimeout(() => {
+    if (unfold) {
+      next.classList.add("active", "unfold-enter");
+      next.addEventListener(
+        "animationend",
+        () => next.classList.remove("unfold-enter"),
+        { once: true }
+      );
+    } else {
+      next.classList.add("active");
+    }
+  }, delay);
+
+  currentPhase = name;
 }
 
-// ── Landing → Story input ──
-document.getElementById("btn-enter").addEventListener("click", () => {
-  showPhase("storyInput");
-  showPrompt(0);
+// ──────────────────────────────────────
+//  Breath-text Animation
+//  Text fades in, holds, fades out,
+//  then the prompt body fades in.
+// ──────────────────────────────────────
+function playBreathText(textEl, bodyEl) {
+  bodyEl.classList.remove("visible");
+  textEl.classList.remove("visible");
+
+  // Fade in the breath text after a beat
+  setTimeout(() => textEl.classList.add("visible"), 300);
+
+  // Fade it out
+  setTimeout(() => textEl.classList.remove("visible"), 4200);
+
+  // Fade in the prompt body
+  setTimeout(() => bodyEl.classList.add("visible"), 6000);
+}
+
+// ──────────────────────────────────────
+//  LANDING
+// ──────────────────────────────────────
+$("btn-enter").addEventListener("click", () => {
+  showPhase("prompt", { zoom: true, unfold: true });
+  playBreathText($("breath-text"), $("prompt-body"));
 });
 
-// ── Show a conductor prompt ──
-function showPrompt(index) {
-  currentStep = index;
-  promptText.style.opacity = 0;
-  setTimeout(() => {
-    promptText.textContent = PROMPTS[index];
-    promptText.style.opacity = 1;
-  }, 300);
-  answerBox.value = "";
-  answerBox.focus();
-  progressFill.style.width = `${((index + 1) / PROMPTS.length) * 100}%`;
-  promptLabel.textContent =
-    index === 0 ? "The Conductor" : `Question ${index} of ${PROMPTS.length - 1}`;
-}
+// ──────────────────────────────────────
+//  STORY PROMPT
+// ──────────────────────────────────────
+const storyBox = $("story-box");
 
-// ── Next / Submit ──
-document.getElementById("btn-next").addEventListener("click", handleNext);
-answerBox.addEventListener("keydown", (e) => {
+$("btn-submit").addEventListener("click", submitStory);
+storyBox.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
-    handleNext();
+    submitStory();
   }
 });
 
-function handleNext() {
-  const text = answerBox.value.trim();
+function submitStory() {
+  const text = storyBox.value.trim();
   if (!text) return;
-
-  answers.push(text);
-
-  if (currentStep < PROMPTS.length - 1) {
-    showPrompt(currentStep + 1);
-  } else {
-    generateReplay();
-  }
+  userStory = text;
+  generateReplay();
 }
 
-// ── Speech-to-text (Web Speech API) ──
-let recognition = null;
-let isRecording = false;
-
-if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SpeechRecognition();
-  recognition.continuous = false;
-  recognition.interimResults = true;
-  recognition.lang = "en-US";
-
-  recognition.onresult = (event) => {
-    let transcript = "";
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      transcript += event.results[i][0].transcript;
-    }
-    answerBox.value = transcript;
-  };
-
-  recognition.onend = () => {
-    isRecording = false;
-    document.getElementById("btn-mic").classList.remove("recording");
-    micStatus.textContent = "";
-  };
-
-  recognition.onerror = (event) => {
-    isRecording = false;
-    document.getElementById("btn-mic").classList.remove("recording");
-    micStatus.textContent =
-      event.error === "not-allowed"
-        ? "Microphone access denied. Please allow mic access."
-        : "";
-  };
-} else {
-  // Hide mic button if not supported
-  document.getElementById("btn-mic").style.display = "none";
-}
-
-document.getElementById("btn-mic").addEventListener("click", () => {
-  if (!recognition) return;
-
-  if (isRecording) {
-    recognition.stop();
-  } else {
-    answerBox.value = "";
-    recognition.start();
-    isRecording = true;
-    document.getElementById("btn-mic").classList.add("recording");
-    micStatus.textContent = "Listening...";
-  }
-});
-
-// ── Generate replay (build prompt → call Runware) ──
+// ──────────────────────────────────────
+//  ACCEPTANCE STATE + VIDEO GENERATION
+// ──────────────────────────────────────
 async function generateReplay() {
-  showPhase("hold");
+  const msgEl = $("acceptance-msg");
+  msgEl.textContent = "";
+  msgEl.classList.remove("visible");
+  showPhase("acceptance");
 
   try {
-    // Step 1: Build the video prompt from answers
-    const promptRes = await fetch("/api/build-prompt", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answers }),
-    });
-    const { prompt } = await promptRes.json();
-    console.log("Video prompt:", prompt);
+    // Fire holding message + prompt build in parallel
+    const [holdRes, promptRes] = await Promise.all([
+      fetch("/api/generate-holding-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ story: userStory }),
+      }).then((r) => r.json()),
+      fetch("/api/build-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ story: userStory }),
+      }).then((r) => r.json()),
+    ]);
 
-    // Step 2: Generate the video via Runware
+    // Display + speak the reassuring message
+    msgEl.textContent = holdRes.message;
+    msgEl.classList.add("visible");
+    speakText(holdRes.message);
+
+    // Generate video (longer operation)
     const videoRes = await fetch("/api/generate-video", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt: promptRes.prompt }),
     });
 
     if (!videoRes.ok) {
@@ -155,32 +142,198 @@ async function generateReplay() {
       throw new Error(err.error || "Video generation failed");
     }
 
-    const { videoURL } = await videoRes.json();
-    console.log("Video URL:", videoURL);
+    const data = await videoRes.json();
+    videoURL = data.videoURL;
 
-    // Step 3: Show the video
-    replayVideo.src = videoURL;
-    showPhase("playback");
+    // Let the user absorb the message a moment longer
+    await sleep(2500);
+
+    // Transition to video
+    openPlayback();
   } catch (err) {
     console.error(err);
-    errorMessage.textContent = err.message || "Something went wrong. Please try again.";
+    $("error-message").textContent =
+      err.message || "Something went wrong. Please try again.";
     showPhase("error");
   }
 }
 
-// ── Playback controls ──
-document.getElementById("btn-replay").addEventListener("click", () => {
-  replayVideo.currentTime = 0;
-  replayVideo.play();
+// ──────────────────────────────────────
+//  VIDEO PLAYBACK
+// ──────────────────────────────────────
+function openPlayback() {
+  const stage = $("video-stage");
+  const video = $("replay-video");
+  const actions = $("playback-actions");
+
+  // Reset visual states
+  stage.classList.remove("unfolding", "revealed");
+  actions.classList.remove("visible");
+  video.src = videoURL;
+
+  showPhase("playback");
+
+  // Trigger the "unfold" reveal
+  requestAnimationFrame(() => stage.classList.add("unfolding"));
+
+  stage.addEventListener(
+    "animationend",
+    () => {
+      stage.classList.remove("unfolding");
+      stage.classList.add("revealed");
+      video.play();
+    },
+    { once: true }
+  );
+
+  // Show replay / continue when video ends
+  video.addEventListener(
+    "ended",
+    () => actions.classList.add("visible"),
+    { once: true }
+  );
+}
+
+$("btn-replay").addEventListener("click", () => {
+  const video = $("replay-video");
+  const actions = $("playback-actions");
+  actions.classList.remove("visible");
+  video.currentTime = 0;
+  video.play();
+  video.addEventListener(
+    "ended",
+    () => actions.classList.add("visible"),
+    { once: true }
+  );
 });
 
-document.getElementById("btn-restart").addEventListener("click", () => {
-  answers.length = 0;
-  currentStep = 0;
-  replayVideo.src = "";
+$("btn-continue").addEventListener("click", () => {
+  showPhase("reflection");
+  playBreathText($("reflect-breath"), $("reflect-body"));
+});
+
+// ──────────────────────────────────────
+//  REFLECTION
+// ──────────────────────────────────────
+const reflectBox = $("reflect-box");
+
+$("btn-reflect-submit").addEventListener("click", submitReflection);
+reflectBox.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    submitReflection();
+  }
+});
+
+function submitReflection() {
+  const text = reflectBox.value.trim();
+  if (!text) return;
+  showPhase("ending");
+}
+
+// ──────────────────────────────────────
+//  RESTART
+// ──────────────────────────────────────
+$("btn-restart").addEventListener("click", () => {
+  userStory = "";
+  videoURL = "";
+  storyBox.value = "";
+  reflectBox.value = "";
+  $("replay-video").src = "";
+  $("acceptance-msg").textContent = "";
+  $("acceptance-msg").classList.remove("visible");
+  $("prompt-body").classList.remove("visible");
+  $("reflect-body").classList.remove("visible");
+  $("video-stage").classList.remove("unfolding", "revealed");
+  $("playback-actions").classList.remove("visible");
   showPhase("landing");
 });
 
-document.getElementById("btn-retry").addEventListener("click", () => {
-  generateReplay();
+// ── Error retry ──
+$("btn-retry").addEventListener("click", () => {
+  if (userStory) generateReplay();
 });
+
+// ──────────────────────────────────────
+//  SPEECH-TO-TEXT (Web Speech API)
+// ──────────────────────────────────────
+let recognition = null;
+let isRecording = false;
+let recBtn = null;
+let recArea = null;
+let recStatus = null;
+
+if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = "en-US";
+
+  recognition.onresult = (e) => {
+    let t = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      t += e.results[i][0].transcript;
+    }
+    if (recArea) recArea.value = t;
+  };
+
+  recognition.onend = () => {
+    isRecording = false;
+    if (recBtn) recBtn.classList.remove("recording");
+    if (recStatus) recStatus.textContent = "";
+  };
+
+  recognition.onerror = (e) => {
+    isRecording = false;
+    if (recBtn) recBtn.classList.remove("recording");
+    if (recStatus) {
+      recStatus.textContent =
+        e.error === "not-allowed" ? "Microphone access denied." : "";
+    }
+  };
+} else {
+  $("btn-mic").style.display = "none";
+  $("btn-mic-reflect").style.display = "none";
+}
+
+function toggleMic(btn, textarea, status) {
+  if (!recognition) return;
+  if (isRecording) {
+    recognition.stop();
+    return;
+  }
+  recBtn = btn;
+  recArea = textarea;
+  recStatus = status;
+  textarea.value = "";
+  recognition.start();
+  isRecording = true;
+  btn.classList.add("recording");
+  status.textContent = "Listening...";
+}
+
+$("btn-mic").addEventListener("click", () =>
+  toggleMic($("btn-mic"), storyBox, $("mic-status"))
+);
+$("btn-mic-reflect").addEventListener("click", () =>
+  toggleMic($("btn-mic-reflect"), reflectBox, $("mic-status-reflect"))
+);
+
+// ──────────────────────────────────────
+//  TEXT-TO-SPEECH (spoken acceptance msg)
+// ──────────────────────────────────────
+function speakText(text) {
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.88;
+  u.pitch = 0.95;
+  u.volume = 0.75;
+  window.speechSynthesis.speak(u);
+}
+
+// ── Utility ──
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
