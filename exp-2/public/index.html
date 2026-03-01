@@ -7,82 +7,114 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Phase 0: Landing -->
+  <!-- Ambient background -->
+  <div class="ambient-bg" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- Phase: Landing -->
   <section id="landing" class="phase active">
-    <div class="landing-content">
-      <h1>ReplayTheatre<span class="dot">.ai</span></h1>
-      <p class="tagline">Tell your story. Watch it come alive.</p>
-      <p class="subtitle">
-        A digital playback theatre that listens to your personal story
-        and replays it as an AI-generated visual experience.
-      </p>
-      <button id="btn-enter" class="btn-primary">Enter the Theatre</button>
+    <div class="center-col">
+      <h1 class="title">ReplayTheatre<span class="dot">.ai</span></h1>
+      <button id="btn-enter" class="btn-primary">Enter theatre</button>
       <p class="disclaimer">This is not therapy. If you're in crisis, please contact a helpline.</p>
     </div>
   </section>
 
-  <!-- Phase 1: Guided story input -->
-  <section id="story-input" class="phase">
-    <div class="input-content">
-      <div class="progress-bar">
-        <div class="progress-fill" id="progress-fill"></div>
-      </div>
-      <p class="prompt-label" id="prompt-label">The Conductor</p>
-      <h2 class="prompt-text" id="prompt-text"></h2>
-      <div class="input-area">
-        <textarea
-          id="answer-box"
-          placeholder="Type your response here..."
-          rows="4"
-        ></textarea>
-        <div class="input-controls">
-          <button id="btn-mic" class="btn-icon" title="Speak your answer">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-              <line x1="12" y1="19" x2="12" y2="23"/>
-              <line x1="8" y1="23" x2="16" y2="23"/>
-            </svg>
-          </button>
-          <button id="btn-next" class="btn-primary btn-small">Continue</button>
+  <!-- Phase: Story Prompt -->
+  <section id="prompt" class="phase">
+    <div class="center-col wide">
+      <p class="breath-text" id="breath-text">Take a deep breath.</p>
+      <div class="prompt-body" id="prompt-body">
+        <h2 class="question">
+          Think of a moment that still stays with you &mdash; something unresolved,
+          something beautiful, or something you keep returning to. Describe
+          what happened. Where were you, who was there, and what did it feel
+          like? What would make this moment feel complete?
+        </h2>
+        <div class="input-group">
+          <textarea id="story-box" placeholder="Begin writing here..." rows="5"></textarea>
+          <div class="input-controls">
+            <button id="btn-mic" class="btn-icon" title="Speak your story">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+            <button id="btn-submit" class="btn-primary btn-sm">Share</button>
+          </div>
+          <p class="mic-status" id="mic-status"></p>
         </div>
       </div>
-      <p class="mic-status" id="mic-status"></p>
     </div>
   </section>
 
-  <!-- Phase 2: Hold / Waiting -->
-  <section id="hold" class="phase">
-    <div class="hold-content">
+  <!-- Phase: Acceptance / Holding -->
+  <section id="acceptance" class="phase">
+    <div class="center-col">
       <div class="breathing-circle"></div>
-      <h2>Your story is being heard...</h2>
-      <p class="hold-sub">Take a breath. Your replay is being created.</p>
+      <p class="acceptance-msg" id="acceptance-msg"></p>
     </div>
   </section>
 
-  <!-- Phase 3: Video playback -->
+  <!-- Phase: Video Playback -->
   <section id="playback" class="phase">
-    <div class="playback-content">
-      <h2>Your Replay</h2>
-      <div class="video-stage">
-        <video id="replay-video" controls autoplay></video>
+    <div class="playback-wrap">
+      <div class="video-stage" id="video-stage">
+        <video id="replay-video" playsinline></video>
       </div>
-      <div class="reflection">
-        <p class="reflection-prompt">How did that feel?</p>
-        <div class="reflection-actions">
-          <button id="btn-replay" class="btn-secondary">Replay</button>
-          <button id="btn-restart" class="btn-secondary">Start Over</button>
+      <div class="playback-actions" id="playback-actions">
+        <button id="btn-replay" class="btn-secondary">Replay</button>
+        <button id="btn-continue" class="btn-primary btn-sm">Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Phase: Reflection -->
+  <section id="reflection" class="phase">
+    <div class="center-col wide">
+      <p class="breath-text" id="reflect-breath">Take a moment to reflect on what you saw.</p>
+      <div class="prompt-body" id="reflect-body">
+        <h2 class="question">
+          How do you feel? Did you have any new thoughts about the experience?
+        </h2>
+        <div class="input-group">
+          <textarea id="reflect-box" placeholder="Write your thoughts..." rows="5"></textarea>
+          <div class="input-controls">
+            <button id="btn-mic-reflect" class="btn-icon" title="Speak your reflection">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+            <button id="btn-reflect-submit" class="btn-primary btn-sm">Share</button>
+          </div>
+          <p class="mic-status" id="mic-status-reflect"></p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Phase 3b: Error state -->
+  <!-- Phase: Ending -->
+  <section id="ending" class="phase">
+    <div class="center-col">
+      <p class="ending-msg">Thank you for sharing.</p>
+      <button id="btn-restart" class="btn-primary">Start again</button>
+    </div>
+  </section>
+
+  <!-- Phase: Error -->
   <section id="error" class="phase">
-    <div class="hold-content">
+    <div class="center-col">
       <h2>Something went wrong</h2>
-      <p class="hold-sub" id="error-message">We couldn't generate your replay. Please try again.</p>
-      <button id="btn-retry" class="btn-primary" style="margin-top:2rem">Try Again</button>
+      <p class="error-sub" id="error-message">We couldn't create your replay. Please try again.</p>
+      <button id="btn-retry" class="btn-primary">Try again</button>
     </div>
   </section>
 
