@@ -103,15 +103,27 @@ function submitStory() {
 
 // ──────────────────────────────────────
 //  ACCEPTANCE STATE + VIDEO GENERATION
+//
+//  Flow:
+//  1. Immediately show "Thank you for sharing..." + play ThankYou.mp3
+//  2. In background: fire LLM holding message + prompt build + video gen
+//  3. When LLM message ready → generate speech via Runware
+//  4. When speech ready → display text + play audio
+//  5. When video ready → transition to playback
 // ──────────────────────────────────────
 async function generateReplay() {
   const msgEl = $("acceptance-msg");
-  msgEl.textContent = "";
-  msgEl.classList.remove("visible");
+  msgEl.textContent = "Thank you for sharing your story...";
+  msgEl.classList.add("visible");
   showPhase("acceptance");
 
+  // Play the pre-recorded thank-you audio immediately
+  const thankYouAudio = new Audio("/ThankYou.mp3");
+  thankYouAudio.volume = 0.75;
+  thankYouAudio.play().catch(() => {});
+
   try {
-    // Fire holding message + prompt build in parallel
+    // Fire holding message + prompt build in parallel (while thank-you plays)
     const [holdRes, promptRes] = await Promise.all([
       fetch("/api/generate-holding-message", {
         method: "POST",
@@ -125,17 +137,52 @@ async function generateReplay() {
       }).then((r) => r.json()),
     ]);
 
-    // Display + speak the reassuring message
-    msgEl.textContent = holdRes.message;
-    msgEl.classList.add("visible");
-    speakText(holdRes.message);
-
-    // Generate video (longer operation)
-    const videoRes = await fetch("/api/generate-video", {
+    // Start video generation immediately (long-running, runs in background)
+    const videoPromise = fetch("/api/generate-video", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt: promptRes.prompt }),
     });
+
+    // Generate speech audio for the LLM holding message via Runware
+    let speechAudioURL = null;
+    try {
+      const speechRes = await fetch("/api/generate-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: holdRes.message }),
+      });
+      if (speechRes.ok) {
+        const speechData = await speechRes.json();
+        speechAudioURL = speechData.audioURL;
+      }
+    } catch (e) {
+      console.warn("Speech generation failed, showing text only:", e);
+    }
+
+    // Wait for thank-you audio to finish before showing LLM message
+    await waitForAudioEnd(thankYouAudio);
+
+    // Fade out the thank-you text
+    msgEl.classList.remove("visible");
+    await sleep(1200); // match the CSS transition duration
+
+    // Swap text and fade back in
+    msgEl.textContent = holdRes.message;
+    msgEl.classList.add("visible");
+    await sleep(1200);
+
+    // Play the Runware-generated speech if available
+    if (speechAudioURL) {
+      const holdingAudio = new Audio(speechAudioURL);
+      holdingAudio.volume = 0.75;
+      holdingAudio.play().catch(() => {});
+      // Wait for it to finish before moving on
+      await waitForAudioEnd(holdingAudio);
+    }
+
+    // Now wait for video generation to complete
+    const videoRes = await videoPromise;
 
     if (!videoRes.ok) {
       const err = await videoRes.json();
@@ -145,8 +192,8 @@ async function generateReplay() {
     const data = await videoRes.json();
     videoURL = data.videoURL;
 
-    // Let the user absorb the message a moment longer
-    await sleep(2500);
+    // Brief pause to let the user absorb
+    await sleep(1500);
 
     // Transition to video
     openPlayback();
@@ -156,6 +203,15 @@ async function generateReplay() {
       err.message || "Something went wrong. Please try again.";
     showPhase("error");
   }
+}
+
+// ── Wait for an Audio element to finish playing ──
+function waitForAudioEnd(audio) {
+  return new Promise((resolve) => {
+    if (audio.ended || audio.paused) return resolve();
+    audio.addEventListener("ended", resolve, { once: true });
+    audio.addEventListener("error", resolve, { once: true });
+  });
 }
 
 // ──────────────────────────────────────
@@ -319,19 +375,6 @@ $("btn-mic").addEventListener("click", () =>
 $("btn-mic-reflect").addEventListener("click", () =>
   toggleMic($("btn-mic-reflect"), reflectBox, $("mic-status-reflect"))
 );
-
-// ──────────────────────────────────────
-//  TEXT-TO-SPEECH (spoken acceptance msg)
-// ──────────────────────────────────────
-function speakText(text) {
-  if (!("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = 0.88;
-  u.pitch = 0.95;
-  u.volume = 0.75;
-  window.speechSynthesis.speak(u);
-}
 
 // ── Utility ──
 function sleep(ms) {
